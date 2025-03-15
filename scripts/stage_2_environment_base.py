@@ -7,8 +7,15 @@ import cv2
 
 os.environ['PYBULLET_DEBUG'] = '0'
 
+
+with open(os.devnull, 'w') as devnull:
+    original_stdout = os.dup(1)  # Duplicate stdout
+    os.dup2(devnull.fileno(), 1)  # Redirect stdout to devnull
+    client = p.connect(p.GUI)
+    os.dup2(original_stdout, 1)  # Restore original stdout
+
 # Connect to PyBullet in GUI mode
-physicsClient = p.connect(p.GUI)
+# physicsClient = p.connect(p.GUI)
 
 p.resetSimulation()
 

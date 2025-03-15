@@ -6,7 +6,19 @@ import time
 import cv2
 from gymnasium import Env, spaces
 import matplotlib.pyplot as plt
-import contextlib
+import logging
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format="%(asctime)s - %(levelname)s - %(message)s"  # Define the format of log messages
+    # NOTE: To save logs to a file, uncomment the following line
+    # handlers=[
+    #     logging.FileHandler("app.log"),  # Save logs to a file
+    #     logging.StreamHandler()  # Also print logs to console
+    # ]
+)
 
 class RoboticPushingEnv(Env):
     """
@@ -199,7 +211,7 @@ class RoboticPushingEnv(Env):
             projectionMatrix=self.projection_matrix
         )
         
-        return rgb_img, depth_img, seg_img
+        return rgb_img, seg_img
     
     def _get_object_bounding_box(self, rgb_img, seg_img):
         """
@@ -208,6 +220,8 @@ class RoboticPushingEnv(Env):
         Returns:
             bbox (np.ndarray): [x, y, width, height] normalized to [0, 1]
         """
+        # TODO: check whether we can segment using the default seg_img
+        # TODO: later train a nano YOLOv11 model to get bbox
         # Get object segmentation mask
         object_mask = (seg_img == self.object_id).astype(np.uint8)
         
@@ -237,6 +251,8 @@ class RoboticPushingEnv(Env):
         Returns:
             np.ndarray: Normalized target [x, y] position
         """
+        # TODO: can we get target position using seg_img?
+        # TODO: train a nano YOLOv11 model to get bbox
         # Get the target position relative to the table center
         target_x = self.target_position[0] - self.table_position[0]
         target_y = self.target_position[1] - self.table_position[1]
@@ -476,8 +492,10 @@ if __name__ == "__main__":
         obs, reward, terminated, truncated, info = env.step(action)
         
         if terminated or truncated:
-            # TODO: add logging here
+            logging.debug(f"Episode terminated with reward: {reward}")
             obs, _ = env.reset()
     
+    logging.info("Simulation complete!")
+    print(f"{'*'*20}*")
     # Close environment
     env.close()
