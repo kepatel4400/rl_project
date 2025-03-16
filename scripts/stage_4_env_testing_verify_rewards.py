@@ -1362,27 +1362,29 @@ def test_rewards():
     # Create the environment
     env = RoboticPushingEnv(render_mode="human", max_steps=200)
     
+    # Select each reward for debugging
     # debug_reward_component(env, 'time_penalty', steps=30)
     # debug_reward_component(env, 'distance_reward', steps=30)
     # debug_reward_component(env, 'progress_reward', steps=30)
     # debug_reward_component(env, 'approach_reward', steps=30)
     # debug_reward_component(env, 'movement_reward', steps=30)
-    debug_reward_component(env, 'goal_reward', steps=60)
+    # debug_reward_component(env, 'goal_reward', steps=60)
     
     # Close the environment
     env.close()
 
-# Example usage
-if __name__ == "__main__":
+def testing_and_validation():
 
     # Test environment
-    # test_results = test_environment_2(test_safety=True, show_plots=True, max_steps=300)
-    # print(f"\nFinal Results: {test_results}")
+    test_results = test_environment_2(test_safety=True, show_plots=True, max_steps=300)
+    print(f"\nFinal Results: {test_results}")
 
     # Test reward components and sensitivity
     test_rewards()
 
-    '''
+# Example usage
+if __name__ == "__main__":
+
     # Create environment
     env = RoboticPushingEnv(render_mode="human", max_steps=100000)
     
@@ -1404,6 +1406,6 @@ if __name__ == "__main__":
     logging.info("✅ Simulation complete!")
     print(f"{'*'*80}*")
     print(f"{'*'*80}*\n")
+    
     # Close environment
-    env.close()'
-    '''
+    env.close()
