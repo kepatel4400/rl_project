@@ -38,10 +38,10 @@ panda = p.loadURDF("franka_panda/panda.urdf", basePosition=ROBOT_POSITION, useFi
 
 # [DEBUG only]
 # To get total number of joints and joint info
-# print("[DEBUG] Total Joints: ", p.getNumJoints(panda))
-# p.getNumJoints(panda)
-# for i in range(p.getNumJoints(panda)):
-#     print(p.getJointInfo(panda, i))
+print("[DEBUG] Total Joints: ", p.getNumJoints(panda))
+p.getNumJoints(panda)
+for i in range(p.getNumJoints(panda)):
+    print(p.getJointInfo(panda, i))
 
 # Adjusted pushable object (small cube), positioned on table surface
 object_start_position = [0.5, -0.3, 0.65]
