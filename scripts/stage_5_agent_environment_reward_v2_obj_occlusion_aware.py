@@ -68,8 +68,8 @@ class RoboticPushingEnv(Env):
         # Position parameters
         self.table_position = [0.5, 0, 0]
         self.robot_position = [0, 0, 0.6]
-        self.object_start_position = [0.5, -0.1, 0.65]
-        self.target_position = [0.6, 0.0, 0.625]
+        self.object_start_position = [0.55, 0.0, 0.645] # [0.5, -0.1, 0.65]
+        self.target_position = [0.7, 0.0, 0.625]
 
         self.table_width = 1.0
         self.table_height = 0.6
@@ -139,7 +139,7 @@ class RoboticPushingEnv(Env):
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
 
         # User parameters
-        self.distance_threshold = 0.05  # Distance threshold for object-target proximity    
+        self.distance_threshold = 0.03  # Distance threshold for object-target proximity    
     
     def _connect_physics_client(self):
         """Connect to the PyBullet physics server."""
@@ -206,7 +206,8 @@ class RoboticPushingEnv(Env):
         # Initial joint positions for home position - configured for pushing task
         # These values position the end effector above the table at a good height for pushing
         # initial_joint_positions = [0, -0.3, 0, -2.2, 0, 2.0, 0.8]
-        initial_joint_positions = [0.0, 0.347, -0.0, -2.431, -0.0, 2.732, 0.625]
+        # initial_joint_positions = [0.0, 0.347, -0.0, -2.431, -0.0, 2.732, 0.625] # robot pose 1
+        initial_joint_positions = [0.0, 0.347, -0.0, -2.431, -0.0, 2.85, 0.78] # robot pose 2
         
         # Get current number of joints
         self.num_joints = p.getNumJoints(self.robot_id)
@@ -349,6 +350,8 @@ class RoboticPushingEnv(Env):
         
         logging.info(f"❌ [vision] Object not found")
         # Return default bbox if object is not visible
+        # TODO: don't return default box, this might negatively affect the learning process,
+        # Need to think something better
         return np.array([0.5, 0.5, 0.1, 0.1], dtype=np.float32)
     
     def _get_target_position_2d(self, seg_img):
@@ -421,6 +424,10 @@ class RoboticPushingEnv(Env):
         # Extract observations
         object_bbox = self._get_object_bounding_box(rgb_img, seg_img)
         proprio_data = self._get_proprioceptive_data()
+
+        object_bbox = self._get_object_bounding_box(rgb_img, seg_img)
+        occlusion_detected = self._detect_occlusion(object_bbox, rgb_img, seg_img)
+        self.current_occlusion = occlusion_detected  # Store for reward calculation
         
         return {
             'vision': object_bbox,
@@ -468,18 +475,21 @@ class RoboticPushingEnv(Env):
         """
 
         # Reward weights for easier tuning
-        time_penalty_weight = 1.0
+        time_penalty_weight = 0.5
         goal_reward_weight = 1.0
         distance_reward_weight = 1.0
-        progress_reward_weight = 2.0
-        approach_reward_weight = 1.0
-        movement_reward_weight = 2.0
+        progress_reward_weight = 5.0
+        approach_reward_weight = 2.0
+        movement_reward_weight = 3.0
+        edge_penalty_weight = 1.0
+        occlusion_penalty_weight = 1.0
 
         # Reward 1: Time step penalty (encourages efficiency) (dense reward)
         time_penalty = -0.01
         
         # Reward 2: Goal completion reward (sparse reward)
-        goal_reward = 10.0 if self._is_object_at_target() else 0.0
+        # goal_reward = 10.0 if self._is_object_at_target() else 0.0
+        goal_reward = 50.0 if self._is_object_at_target() else 0.0
 
         # Get object and target positions
         object_pos, _ = p.getBasePositionAndOrientation(self.object_id)
@@ -491,7 +501,7 @@ class RoboticPushingEnv(Env):
         # Reward 3: Proximity reward (dense reward)
         # Distance-based reward (bounded to avoid excessive penalties)
         # Using exponential function to smooth out the penalty
-        distance_reward = -1.0 * (1.0 - np.exp(-2.0 * dist))
+        distance_reward = -1.0 * (1.0 - np.exp(-4.0 * dist))
         
         # Reward 4: Progress reward (dense reward)
         # Progress reward (for reducing distance)
@@ -511,13 +521,37 @@ class RoboticPushingEnv(Env):
         approach_reward = 0.2 / (1.0 + 10.0 * ee_to_object_dist)
         
         # Reward 6: Object movement reward (dense reward)
-        # Object movement reward (encourage pushing rather than just contact)
-        if hasattr(self, 'prev_object_pos'):
+        # Object movement reward (encourage pushing rather than just contact)        
+        # Make movement reward conditional on moving toward the target
+        if hasattr(self, 'prev_dist') and hasattr(self, 'prev_object_pos'):
             object_movement = np.sqrt((object_pos[0] - self.prev_object_pos[0])**2 + 
-                                     (object_pos[1] - self.prev_object_pos[1])**2)
-            movement_reward = min(0.5, object_movement * 5.0)  # Cap at 0.5 to prevent erratic behavior
+                                    (object_pos[1] - self.prev_object_pos[1])**2)
+            
+            # Only reward movement if it's also reducing distance to target
+            if self.prev_dist > dist:
+                movement_reward = min(10.0, object_movement * 10.0)
+            else:
+                movement_reward = 0
         else:
             movement_reward = 0
+
+        # Reward 7
+        # Add edge proximity penalty
+        # Calculate distance to nearest edge
+        table_half_length = self.table_length/2
+        table_half_width = self.table_width/2
+            
+        edge_dist_x = min(abs(object_pos[0] - (self.table_position[0] - table_half_length)), 
+                        abs(object_pos[0] - (self.table_position[0] + table_half_length)))
+        edge_dist_y = min(abs(object_pos[1] - (self.table_position[1] - table_half_width)),
+                        abs(object_pos[1] - (self.table_position[1] + table_half_width)))
+            
+        min_edge_dist = min(edge_dist_x, edge_dist_y)
+        edge_penalty = -1.0 * max(0, 0.2 - min_edge_dist) * 5.0  # Penalty increases as object gets closer to edge
+        
+        # Add occlusion penalty
+        occlusion_penalty = -2.0 if self.current_occlusion else 0.0
+
         self.prev_object_pos = object_pos
         
         # Total reward
@@ -527,7 +561,9 @@ class RoboticPushingEnv(Env):
                   distance_reward_weight * distance_reward +
                   progress_reward_weight * progress_reward +
                   approach_reward_weight * approach_reward +
-                  movement_reward_weight * movement_reward)
+                  movement_reward_weight * movement_reward +
+                  edge_penalty_weight * edge_penalty +
+                  occlusion_penalty_weight * occlusion_penalty)
         
         return reward
     
@@ -634,7 +670,7 @@ class RoboticPushingEnv(Env):
         
         # Randomize object position (optional)
         if options and 'randomize' in options and options['randomize']:
-            x = np.random.uniform(0.3, 0.7)
+            x = np.random.uniform(0.3, 0.6)
             y = np.random.uniform(-0.3, 0.3)
             self.object_start_position = [x, y, 0.65]
             p.resetBasePositionAndOrientation(
@@ -681,7 +717,7 @@ class RoboticPushingEnv(Env):
 
         # Add a large negative reward if object falls off table
         if object_off_table:
-            reward -= 10.0  # Substantial penalty for failure
+            reward -= 50.0  # Much larger penalty for failure
 
         terminated = object_at_target or object_off_table
         truncated = self.step_counter >= self.max_steps
@@ -835,6 +871,39 @@ class RoboticPushingEnv(Env):
             logging.info("🚨 [termination] Object has moved outside table boundaries")
             return True
         
+        return False
+    
+    def _detect_occlusion(self, object_bbox, rgb_img, seg_img):
+        """Detect if the robot is occluding the object from camera view."""
+        
+        # Method 1: Check if bounding box area suddenly decreased
+        if hasattr(self, 'prev_bbox'):
+            prev_area = self.prev_bbox[2] * self.prev_bbox[3]
+            current_area = object_bbox[2] * object_bbox[3]
+            
+            # If area reduced significantly and object is not near edges
+            if current_area < prev_area * 0.7:
+                # Get robot segmentation mask
+                seg_img_single = seg_img & ((1 << 24) - 1) 
+                robot_mask = np.zeros_like(seg_img_single, dtype=np.uint8)
+                
+                # Check for robot pixels in the expected object region
+                for i in range(1, self.num_joints + 1):  # +1 for base
+                    robot_mask[seg_img_single == self.robot_id + i - 1] = 255
+                
+                # Approximate where object should be based on previous detection
+                prev_x = int(self.prev_bbox[0] * self.camera_width)
+                prev_y = int(self.prev_bbox[1] * self.camera_height)
+                prev_w = int(self.prev_bbox[2] * self.camera_width)
+                prev_h = int(self.prev_bbox[3] * self.camera_height)
+                
+                # Check if robot is in the expected object region
+                expected_object_region = robot_mask[prev_y:prev_y+prev_h, prev_x:prev_x+prev_w]
+                if np.sum(expected_object_region) > 0:
+                    return True
+        
+        # Save current bbox for next comparison
+        self.prev_bbox = object_bbox.copy()
         return False
 
 # Example usage

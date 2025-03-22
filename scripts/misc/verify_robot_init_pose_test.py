@@ -89,6 +89,7 @@ def main():
         [0, -0.3, 0, -2.2, 0, 2.0, 0.8],  # Initial pose
         [-0.156, -0.058, 0.094, -2.447, -0.062, 2.444, 0.843],   # Pre pushing position
         [0.0, 0.347, -0.0, -2.431, -0.0, 2.732, 0.625],  # Good pushing position
+        [0.0, 0.347, -0.0, -2.431, -0.0, 2.85, 0.78],  # Good pushing position v2
     ]
     
     current_pose = 0

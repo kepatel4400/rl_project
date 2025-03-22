@@ -161,6 +161,7 @@ def main():
     predefined_positions = {
         "Pre-push pose": [-0.156, -0.058, 0.094, -2.447, -0.062, 2.444, 0.843],
         "Home pose": [0, -0.3, 0, -2.2, 0, 2.0, 0.8],
+        "Push pose": [0.0, 0.347, -0.0, -2.431, -0.0, 3.143, 0.78],
         # You can add more positions here as needed
     }
     

@@ -7,7 +7,7 @@ import time
 import pybullet as p  # Import PyBullet directly
 
 # Import the environment
-from stage_5_agent_environment import RoboticPushingEnv
+from scripts.stage_5_agent_environment_ver1 import RoboticPushingEnv
 
 def test_environment(episodes=3, steps_per_episode=200, render="human", sleep_time=0.02):
     """Run a simple test of the environment."""

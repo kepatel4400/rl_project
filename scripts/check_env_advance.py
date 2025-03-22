@@ -13,7 +13,7 @@ import logging
 import datetime
 
 # Import the environment
-from stage_5_agent_environment import RoboticPushingEnv
+from scripts.stage_5_agent_environment_ver1 import RoboticPushingEnv
 
 def test_environment(
     num_episodes=10,
