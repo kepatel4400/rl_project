@@ -131,7 +131,7 @@ class RoboticPushingEnv(Env):
         # Proprioceptive: end-effector position (3) and velocity (3)
         self.observation_space = spaces.Dict({
             'vision': spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),  # Normalized bbox
-            'target': spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32),  # Target x,y
+            'target': spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32),  # Target x,y
             'proprioception': spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)  # End-effector pos & vel
         })
         
@@ -399,13 +399,14 @@ class RoboticPushingEnv(Env):
             target_x = x + w / 2
             target_y = y + h / 2
             
-            # Normalize to [-1, 1] (assuming table is 1.0 x 1.0 m)
-            target_x_norm = (target_x / self.camera_width) * 2.0 - 1.0
-            target_y_norm = (target_y / self.camera_height) * 2.0 - 1.0
+            # Change to [0,1] range to match object bbox
+            target_x_norm = target_x / self.camera_width
+            target_y_norm = target_y / self.camera_height
             
             return np.array([target_x_norm, target_y_norm], dtype=np.float32)
         
         # If target not found, return default position
+        # TODO: either exit the code and implement something else because the target should be visible once only at the start
         return np.array([0.0, 0.0], dtype=np.float32)
     
     def _get_proprioceptive_data(self):
@@ -455,12 +456,18 @@ class RoboticPushingEnv(Env):
         Returns:
             bool: True if object is at target, False otherwise
         """
-        # Get object position
-        object_pos, _ = p.getBasePositionAndOrientation(self.object_id)
+
+        # Get latest detection from vision system
+        if not hasattr(self, 'last_detected_bbox'):
+            return False
+        # Extract center of object bounding box
+        bbox = self.last_detected_bbox
+        obj_center_x = bbox[0] + bbox[2]/2
+        obj_center_y = bbox[1] + bbox[3]/2
         
-        # Calculate distance to target in the xy-plane
-        dist = np.sqrt((object_pos[0] - self.target_position_2d[0])**2 + 
-                      (object_pos[1] - self.target_position_2d[1])**2)
+        # Calculate distance to target in normalized coordinates
+        dist = np.sqrt((obj_center_x - self.target_position_2d[0])**2 + 
+                    (obj_center_y - self.target_position_2d[1])**2)
         
         # Check if distance is within threshold
         return dist < self.distance_threshold
