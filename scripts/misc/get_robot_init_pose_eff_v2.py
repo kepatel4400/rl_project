@@ -80,11 +80,11 @@ class RobotCalibrationTool:
         self.models = models_data.model_lib()
         
         # Add test object - using the pudding_box as in your code
-        self.object_position = [0.4, 0.0, 0.65]
+        self.object_position = [0.55, 0.0, 0.65]
         yaw = np.pi/2
         self.object_orientation = p.getQuaternionFromEuler([0, 0, yaw])
         flags = p.URDF_USE_INERTIA_FROM_FILE
-        self.object_id = p.loadURDF(self.models["blue_tea_box"], 
+        self.object_id = p.loadURDF(self.models["pudding_box"], 
                                   basePosition=self.object_position,
                                   baseOrientation=self.object_orientation, 
                                   flags=flags)
