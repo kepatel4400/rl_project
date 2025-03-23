@@ -68,9 +68,11 @@ class RoboticPushingEnv(Env):
         # Position parameters
         self.table_position = [0.5, 0, 0]
         self.robot_position = [0, 0, 0.6]
-        self.object_start_position = [0.55, 0.0, 0.65] # [0.5, -0.1, 0.65]
+        self.object_start_position = [0.6, 0.0, 0.65]
+        self.object_start_orientation_yaw = np.pi/2
         self.target_position = [0.7, 0.0, 0.625]
 
+        # Table dimensions (estimated from the scene)
         self.table_width = 1.0
         self.table_height = 0.6
         self.table_length = 1.5
@@ -183,7 +185,7 @@ class RoboticPushingEnv(Env):
         # Load a YCB object
         available_objects = ['cracker_box', 'sugar_box', "soap", "pudding_box", "gelatin_box", "blue_tea_box"]
         flags = p.URDF_USE_INERTIA_FROM_FILE
-        self.object_id = p.loadURDF(self.models[self.ycb_object], basePosition=self.object_start_position, flags=flags)
+        self.object_id = p.loadURDF(self.models[self.ycb_object], basePosition=self.object_start_position, baseOrientation=p.getQuaternionFromEuler([0, 0, self.object_start_orientation_yaw]), flags=flags)
         
         # Create target visual (green area)
         target_visual = p.createVisualShape(
@@ -207,7 +209,8 @@ class RoboticPushingEnv(Env):
         # These values position the end effector above the table at a good height for pushing
         # initial_joint_positions = [0, -0.3, 0, -2.2, 0, 2.0, 0.8]
         # initial_joint_positions = [0.0, 0.347, -0.0, -2.431, -0.0, 2.732, 0.625] # robot pose 1
-        initial_joint_positions = [0.0, 0.347, -0.0, -2.431, -0.0, 2.85, 0.78] # robot pose 2
+        # initial_joint_positions = [0.0, 0.347, -0.0, -2.431, -0.0, 2.85, 0.78] # robot pose 2
+        initial_joint_positions = [0.0, 0.087, 0.0, -3.068, 0.0, 3.227, 0.78] # robot pose, no collision with object
         
         # Get current number of joints
         self.num_joints = p.getNumJoints(self.robot_id)
@@ -621,10 +624,11 @@ class RoboticPushingEnv(Env):
         x = np.random.uniform(0.5, 0.6)
         y = np.random.uniform(-0.1, 0.1)
         self.object_start_position = [x, y, 0.65]
+        self.object_orientation = p.getQuaternionFromEuler([0, 0, self.object_start_orientation_yaw])
         p.resetBasePositionAndOrientation(
             self.object_id,
-            self.object_start_position,
-            [0, 0, 0, 1]
+            basePosition=self.object_start_position,
+            baseOrientation=self.object_orientation
         )
         
         # Get initial observation
