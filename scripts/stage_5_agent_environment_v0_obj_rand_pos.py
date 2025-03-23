@@ -626,9 +626,9 @@ class RoboticPushingEnv(Env):
         self.object_start_position = [x, y, 0.65]
         self.object_orientation = p.getQuaternionFromEuler([0, 0, self.object_start_orientation_yaw])
         p.resetBasePositionAndOrientation(
-            self.object_id,
-            basePosition=self.object_start_position,
-            baseOrientation=self.object_orientation
+            bodyUniqueId=self.object_id,
+            posObj=self.object_start_position,
+            ornObj=self.object_orientation
         )
         
         # Get initial observation
