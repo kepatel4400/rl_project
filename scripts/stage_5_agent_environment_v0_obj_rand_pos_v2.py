@@ -479,47 +479,28 @@ class RoboticPushingEnv(Env):
         """Simplified reward function for the basic pushing task."""
 
         # Weights for each reward component
-        time_penalty_weight = 0.5
-        goal_reward_weight = 1.0
-        distance_reward_weight = 1.0
-        progress_reward_weight = 5.0
-        approach_reward_weight = 2.0
-        movement_reward_weight = 3.0
-        edge_penalty_weight = 1.0
-        occlusion_penalty_weight = 1.0
+        time_penalty_weight = 0.2        # Reduced to be less punitive
+        goal_reward_weight = 1.0         # Keep as is - goal completion is important
+        distance_reward_weight = 0.8     # Slightly reduced to avoid greedy direct-line behavior
+        progress_reward_weight = 3.0     # Increased significantly - progress is crucial
+        approach_reward_weight = 1.5     # Increased to encourage proper positioning
+        movement_reward_weight = 4.0     # Highest weight - actually moving the object is most important
+        occlusion_penalty_weight = 2.0   # Increased to discourage blocking the object view
 
-        # 4. Small time penalty
+        # Small time penalty
         time_penalty = -0.01
 
-        # 1. Big positive reward for reaching target
+        # Big positive reward for reaching target
         goal_reward = 50.0 if self._is_object_at_target() else 0.0
-
-        # Get object and target positions
-        # object_pos, _ = p.getBasePositionAndOrientation(self.object_id)
-        # target_pos = self.target_position
         
+        # Distance-based reward (inversely proportional)
         # Calculate distance to target in the xy-plane
-        # dist = np.sqrt((self.obj_center_x - target_pos[0])**2 + 
-        #             (self.obj_center_y - target_pos[1])**2)
-
-        dist = np.sqrt((self.obj_center_x - self.target_position_2d[0])**2 + 
-                    (self.obj_center_y - self.target_position_2d[1])**2)
-        
-        # 2. Distance-based reward (inversely proportional)
-        # distance_reward = -dist * 10.0
+        dist = np.sqrt((self.obj_center_x - self.target_position_2d[0])**2 +
+                       (self.obj_center_y - self.target_position_2d[1])**2)
         # Smoother distance reward using exponential function
         distance_reward = -1.0 * (1.0 - np.exp(-4.0 * dist))
         
-        # 3. Progress reward (for reducing distance)
-        # if hasattr(self, 'prev_dist'):
-        #     progress = self.prev_dist - dist
-        #     # Strong reward for making progress toward target
-        #     progress_reward = progress * 30.0  
-        #     self.prev_dist = dist
-        # else:
-        #     progress_reward = 0
-        #     self.prev_dist = dist
-        # Progress reward
+        # Progress reward (for reducing distance)
         if hasattr(self, 'prev_dist'):
             progress_reward = max(0, self.prev_dist - dist) * 2.0
             self.prev_dist = dist
@@ -535,8 +516,7 @@ class RoboticPushingEnv(Env):
 
         # Object movement reward
         if hasattr(self, 'prev_object_pos'):
-            object_movement = np.sqrt((self.obj_center_x - self.prev_object_pos[0])**2 + 
-                                    (self.obj_center_y - self.prev_object_pos[1])**2)
+            object_movement = np.sqrt((self.obj_center_x - self.prev_object_pos[0])**2 + (self.obj_center_y - self.prev_object_pos[1])**2)
             # Only reward movement if reducing distance to target
             if hasattr(self, 'prev_dist') and self.prev_dist > dist:
                 movement_reward = min(10.0, object_movement * 10.0)
@@ -545,17 +525,18 @@ class RoboticPushingEnv(Env):
         else:
             movement_reward = 0
         self.prev_object_pos = (self.obj_center_x, self.obj_center_y)
-        
-        # Total reward
-        # reward = time_penalty + goal_reward + distance_reward + progress_reward
 
+        # Add occlusion penalty
+        occlusion_penalty = -5.0 if self.current_occlusion else 0.0
+        
         # Total reward
         reward = (time_penalty_weight * time_penalty +
                 goal_reward_weight * goal_reward +
                 distance_reward_weight * distance_reward +
                 progress_reward_weight * progress_reward +
                 approach_reward_weight * approach_reward +
-                movement_reward_weight * movement_reward)
+                movement_reward_weight * movement_reward +
+                occlusion_penalty_weight * occlusion_penalty)
         
         return reward
     
@@ -586,14 +567,14 @@ class RoboticPushingEnv(Env):
         current_orientation = end_effector_state[1]
         
         # Calculate target position (only modify x, y)
-        target_position = [
+        target_position_for_ik = [
             current_position[0] + delta_x,
             current_position[1] + delta_y,
             current_position[2]  # Keep z-coordinate the same
         ]
 
         # Safety check
-        # if not self._is_pose_safe(target_position, current_orientation):
+        # if not self._is_pose_safe(target_position_for_ik, current_orientation):
         #     # Try smaller movement if original is unsafe
         #     scale_factor = 0.5
         #     safe_target = None
@@ -617,14 +598,14 @@ class RoboticPushingEnv(Env):
         #         logging.info("🚨 [safety] No safe action found, skipping")
         #         return
             
-        #     target_position = safe_target
+        #     target_position_for_ik = safe_target
         
         # Use inverse kinematics to get joint positions for target end-effector position
         # We maintain the current orientation for stable pushing
         joint_positions = p.calculateInverseKinematics(
             self.robot_id,
             self.end_effector_index,
-            target_position,
+            target_position_for_ik,
             current_orientation,
             maxNumIterations=100,
             residualThreshold=1e-4
@@ -637,14 +618,15 @@ class RoboticPushingEnv(Env):
             
             # Clip to joint limits
             lower_limit, upper_limit = self.joint_limits[i]
-            target_position = min(max(joint_positions[i], lower_limit), upper_limit)
+            target_position_for_ik = min(
+                max(joint_positions[i], lower_limit), upper_limit)
             
             # Set position control
             p.setJointMotorControl2(
                 bodyIndex=self.robot_id,
                 jointIndex=i,
                 controlMode=p.POSITION_CONTROL,
-                targetPosition=target_position,
+                targetPosition=target_position_for_ik,
                 force=max_force,
                 maxVelocity=2.0  # Limit velocity for smoother movement
             )

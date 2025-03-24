@@ -23,7 +23,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, SubprocVecEnv
 
 # Import agent environment
-from stage_5_agent_environment_v0_obj_rand_pos import RoboticPushingEnv
+from stage_5_agent_environment_v0_obj_rand_pos_v2 import RoboticPushingEnv
 
 try:
     from torch.utils.tensorboard import SummaryWriter
