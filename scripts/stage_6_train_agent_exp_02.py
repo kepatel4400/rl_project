@@ -32,61 +32,6 @@ except ImportError:
     tensorboard_available = False
     print("TensorBoard not available. Install with: pip install tensorboard")
 
-# class CurriculumCallback(BaseCallback):
-#     def __init__(self, env, curriculum_ranges, eval_freq=50, success_threshold=0.8, verbose=1):
-#         super().__init__(verbose)
-#         self.env = env
-#         self.curriculum_ranges = curriculum_ranges
-#         self.current_level = 0
-#         self.eval_freq = eval_freq
-#         self.success_threshold = success_threshold
-
-#         self.episodes_count = 0
-#         self.episode_successes = []
-
-#     def _on_step(self) -> bool:
-#         # Check if the episode has ended
-#         done = self.locals.get("dones", [False])[-1]
-#         info = self.locals.get("infos", [{}])[-1]
-#         if done:
-#             self.episodes_count += 1
-#             is_success = info.get("is_success", False)
-#             self.episode_successes.append(is_success)
-
-#             # Every eval_freq episodes, check if we can bump difficulty
-#             if self.episodes_count % self.eval_freq == 0:
-#                 recent_success = sum(
-#                     self.episode_successes[-self.eval_freq:]) / self.eval_freq
-#                 if self.verbose > 0:
-#                     print(
-#                         f"[CurriculumCallback] {self.eval_freq} episodes done. Success ratio = {recent_success:.2f}")
-
-#                 # If success is high, move up the curriculum list
-#                 if recent_success >= self.success_threshold:
-#                     self.current_level = min(
-#                         self.current_level + 1,
-#                         len(self.curriculum_ranges) - 1
-#                     )
-#                     (new_x_range,
-#                      new_y_range) = self.curriculum_ranges[self.current_level]
-
-#                     if self.verbose > 0:
-#                         print(f"[CurriculumCallback] Upgrading difficulty to level {self.current_level} "
-#                               f"(X={new_x_range}, Y={new_y_range})")
-
-#                     # If you have a VecEnv, apply to each sub-env
-#                     if hasattr(self.env, 'envs'):
-#                         for sub_env in self.env.envs:
-#                             sub_env.object_spawn_range_x = new_x_range
-#                             sub_env.object_spawn_range_y = new_y_range
-#                     else:
-#                         # Single environment
-#                         self.env.object_spawn_range_x = new_x_range
-#                         self.env.object_spawn_range_y = new_y_range
-
-#         return True
-
-
 class CurriculumCallback(BaseCallback):
     def __init__(self, env, curriculum_ranges, eval_freq=50, success_threshold=0.8, verbose=1):
         super().__init__(verbose)
@@ -273,6 +218,7 @@ class RobotPushTrainer:
         log_dir: str = "logs",
         model_dir: str = "models",
         render_mode: Optional[str] = None,
+        difficulty_level: int = 0,
     ):
         """
         Initialize the trainer with configuration parameters.
@@ -326,6 +272,7 @@ class RobotPushTrainer:
         self.log_dir = log_dir
         self.model_dir = model_dir
         self.render_mode = render_mode
+        self.difficulty_level = difficulty_level
         
         # Create directories
         os.makedirs(self.log_dir, exist_ok=True)
@@ -348,6 +295,30 @@ class RobotPushTrainer:
         self.logger_path = os.path.join(self.log_dir, self.run_id)
         os.makedirs(self.logger_path, exist_ok=True)
 
+        # Curriculum learning object positions ranges
+        self.curriculum_ranges = [
+            ((0.58, 0.60), (-0.05, 0.05)),  # Very easy
+            ((0.55, 0.60), (-0.07, 0.07)),    # Easy
+            ((0.52, 0.60), (-0.10, 0.10)),    # Medium
+            ((0.50, 0.60), (-0.12, 0.12)),   # Hard
+            ((0.48, 0.60), (-0.15, 0.15)),    # Very hard
+        ]
+
+        # Level descriptions for better logging
+        self.level_names = ["Very Easy", "Easy", "Medium", "Hard", "Very Hard"]
+
+        # Check valid difficulty level
+        total_levels = len(self.curriculum_ranges)
+        if self.difficulty_level < 0 or self.difficulty_level >= total_levels:
+            raise ValueError(f"Invalid difficulty level. Should be between 0 and {total_levels-1}")
+
+        # Map difficulty levels (int: 0 to 4) to curriculum ranges (very easy to very hard)
+        self.object_spawn_range_x, self.object_spawn_range_y = self.curriculum_ranges[self.difficulty_level]
+
+        print(f"[INFO] Difficulty level {self.difficulty_level}: {self.level_names[self.difficulty_level]}")
+        # print(f"[INFO] Object spawn range x: {self.object_spawn_range_x}")
+        # print(f"[INFO] Object spawn range y: {self.object_spawn_range_y}")
+
         if tensorboard_log:
             self.tensorboard_writer = SummaryWriter(log_dir=tensorboard_log)
         
@@ -366,8 +337,8 @@ class RobotPushTrainer:
                 env = RoboticPushingEnv(
                     render_mode=render_mode if rank == 0 else None,
                     max_steps=max_steps,
-                    object_spawn_range_x=(0.65, 0.67),  # Very narrow, easy
-                    object_spawn_range_y=(-0.05, 0.05)  # Very narrow, easy
+                    object_spawn_range_x=self.object_spawn_range_x,
+                    object_spawn_range_y=self.object_spawn_range_y
                 )
                 # Add Monitor wrapper for logging episode statistics
                 env = Monitor(env, os.path.join(logger_path, f"env_{rank}"))
@@ -467,19 +438,12 @@ class RobotPushTrainer:
 
         # Curriculum callback for adjusting difficulty level
         # Step 1: define or pass your curriculum ranges
-        # For example, a list of (x_range, y_range)
-        curriculum_ranges = [
-            ((0.58, 0.60), (-0.05, 0.05)),  # Very easy
-            ((0.55, 0.60), (-0.07, 0.07)),    # Easy
-            ((0.52, 0.60), (-0.10, 0.10)),    # Medium
-            ((0.50, 0.60), (-0.12, 0.12)),   # Hard
-            ((0.48, 0.60), (-0.15, 0.15)),    # Very hard
-        ]
+        # self.curriculum_ranges
 
         # Step 2: make the callback
         curriculum_callback = CurriculumCallback(
             env=self.env,                 # or whatever variable references the training env
-            curriculum_ranges=curriculum_ranges,
+            curriculum_ranges=self.curriculum_ranges,
             eval_freq=50,                 # check every 50 episodes
             success_threshold=0.8,
             verbose=1
@@ -585,7 +549,9 @@ class RobotPushTrainer:
         # Create a dedicated environment for running episodes
         env = RoboticPushingEnv(
             render_mode="human" if render else None,
-            max_steps=self.max_steps
+            max_steps=self.max_steps,
+            object_spawn_range_x=self.object_spawn_range_x,
+            object_spawn_range_y=self.object_spawn_range_y
         )
         
         # Load model if path is provided
@@ -615,10 +581,23 @@ class RobotPushTrainer:
             
             if render:
                 time.sleep(0.01)  # Slow down for visibility
-        
+
+        # Print episode results
+        print(f"\n*******************\n")
         print(f"Episode finished after {step_count} steps with total reward: {total_reward:.2f}")
         print(f"Success: {info.get('is_success', False)}")
         print(f"Termination reason: {info.get('termination_reason', 'unknown')}")
+        print(f"\n*******************\n")
+
+        # Wait for user input before closing the environment
+        print("Press 'q' to quit or Ctrl+C to exit...")
+        try:
+            while True:
+                user_input = input()
+                if user_input.lower() == 'q':
+                    break
+        except KeyboardInterrupt:
+            print("\nExiting...")
         
         env.close()
         return total_reward, info
@@ -659,6 +638,7 @@ def parse_arguments():
     parser.add_argument("--eval-only", action="store_true", help="Only run evaluation on a trained model")
     parser.add_argument("--run-episode", action="store_true", help="Run a single episode with a trained model")
     parser.add_argument("--n-eval-episodes", type=int, default=10, help="Number of episodes for evaluation")
+    parser.add_argument("--difficulty-level", type=int, default=0, help="Difficulty level for the object spawn range (between 0 to 4)")
     
     return parser.parse_args()
 
@@ -698,6 +678,7 @@ if __name__ == "__main__":
         log_dir=args.log_dir,
         model_dir=args.model_dir,
         render_mode="human" if args.render else None,
+        difficulty_level=args.difficulty_level
     )
     
     # Mode selection based on command line arguments
