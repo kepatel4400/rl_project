@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the task name
-task_name="v0_obj_rand_pos_after_robot_pose_fix"
+task_name="exp_02_curriculum_learning_ent_coef_0p1_relaxed_reward"
 
 # Run the training script
-python scripts/stage_6_train_agent.py --total-timesteps 1000000 --learning-rate 3e-4 --buffer-size 300000 --batch-size 256 --n-envs 8 --parallel --max-steps 200 --train-freq 4 --gradient-steps 4 --learning-starts 5000 --tensorboard --checkpoint-freq 25000 --eval-freq 25000 2>&1 | tee -a "output_${task_name}_$(date +'%Y%m%d_%H%M%S').log"
+python scripts/stage_6_train_agent_exp_02.py --total-timesteps 10000000 --learning-rate 3e-4 --buffer-size 3000000 --batch-size 1024 --n-envs 20 --parallel --max-steps 500 --train-freq 5 --gradient-steps 10 --learning-starts 20000 --tensorboard --checkpoint-freq 25000 --eval-freq 25000 --model-dir "models_${task_name}" 2>&1 | tee -a "output_${task_name}_$(date +'%Y%m%d_%H%M%S').log"
