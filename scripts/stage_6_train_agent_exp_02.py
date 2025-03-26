@@ -23,7 +23,10 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, SubprocVecEnv
 
 # Import agent environment
-from scripts.stage_5_agent_env_curriculum_relaxed_reward_exp_02 import RoboticPushingEnv
+try:
+    from scripts.stage_5_agent_env_curriculum_relaxed_reward_exp_02 import RoboticPushingEnv
+except ImportError:
+    from stage_5_agent_env_curriculum_relaxed_reward_exp_02 import RoboticPushingEnv
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -667,7 +670,7 @@ if __name__ == "__main__":
         train_freq=args.train_freq,
         learning_starts=args.learning_starts,
         tensorboard_log=tensorboard_log,
-        ent_coef=ent_coef, # Change to 'auto_0.05' for better exploration
+        ent_coef=ent_coef,
         checkpoint_freq=args.checkpoint_freq,
         eval_freq=args.eval_freq,
         random_seed=args.seed,
