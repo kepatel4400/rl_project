@@ -12,7 +12,7 @@ from urdf_models import models_data
 '''
 🐞 (Ladybug): For debugging.
 ℹ️ (Information): For informational messages.
-🚨 (Alert/Siren): For errors or warnings.
+🚨 (Alert): For errors or warnings.
 ✅ (Checkmark): For completion or success.
 ⏱️ (Timer Clock): For timing or performance metrics.
 🟡 (Warning)
@@ -49,7 +49,7 @@ class RoboticPushingEnv(Env):
             max_steps (int): Maximum number of steps per episode
             object_spawn_range_x (tuple): Range for spawning objects along x-axis
             object_spawn_range_y (tuple): Range for spawning objects along y-axis
-            observation_type (str): Type of observation to use ("multimodal", "vision_only", "proprio_only")
+            observation_type (str): Type of observation to use ("multimodal", "multimodal_no_goal", "vision_only", "proprio_only")
         """
         super().__init__()
         
@@ -139,8 +139,8 @@ class RoboticPushingEnv(Env):
         _, seg_img = self._get_camera_image()
         self.target_position_2d = self._get_target_position_2d(seg_img)
 
-        self.observation_type = observation_type
         # Define observation space based on the chosen observation type
+        self.observation_type = observation_type
         if self.observation_type == "vision_only":
             self.observation_space = spaces.Dict({
                 # Normalized bbox
@@ -153,25 +153,24 @@ class RoboticPushingEnv(Env):
                 # End-effector pos & vel
                 'proprioception': spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
             })
-        else:  # "full" - multimodal
+        elif self.observation_type == "multimodal_no_goal":
+            self.observation_space = spaces.Dict({
+                # Normalized bbox
+                'vision': spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),
+                # End-effector pos (3) & vel (3)
+                'proprioception': spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
+            })
+        elif self.observation_type == "multimodal":
             self.observation_space = spaces.Dict({
                 # Normalized bbox
                 'vision': spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),
                 # Target x,y
                 'target': spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32),
-                # End-effector pos & vel
+                # End-effector pos (3) & vel (3)
                 'proprioception': spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
             })
-        
-        # Define multimodal observation space
-        # Visual: object bounding box (4 values: x, y, width, height)
-        # Target: 2D position on table (x, y)
-        # Proprioceptive: end-effector position (3) and velocity (3)
-        # self.observation_space = spaces.Dict({
-        #     'vision': spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),  # Normalized bbox
-        #     'target': spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32),  # Target x,y
-        #     'proprioception': spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)  # End-effector pos & vel
-        # })
+        else:
+            raise ValueError(f"Unknown observation type: {self.observation_type}")
         
         # Define action space (end-effector movement in x, y directions)
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
@@ -542,20 +541,20 @@ class RoboticPushingEnv(Env):
         movement_reward_weight = 1.5     # Moving the object is important
         occlusion_penalty_weight = 0.2   # Discourage blocking the object view
 
-        # Small time penalty
+        # 1. Time penalty
         time_penalty = -0.01
 
-        # Big positive reward for reaching target
+        # 2. Big positive reward for reaching target
         goal_reward = 50.0 if self._is_object_at_target() else 0.0
         
-        # Distance-based reward (inversely proportional)
+        # 3. Distance-based reward (inversely proportional)
         # Calculate distance to target in the xy-plane
         dist = np.sqrt((self.obj_center_x - self.target_position_2d[0])**2 +
                        (self.obj_center_y - self.target_position_2d[1])**2)
         # Smoother distance reward using exponential function
         distance_reward = -1.0 * (1.0 - np.exp(-4.0 * dist))
         
-        # Progress reward (for reducing distance)
+        # 4. Progress reward (for reducing distance)
         if hasattr(self, 'prev_dist'):
             progress_reward = max(0, self.prev_dist - dist) * 2.0
             self.prev_dist = dist
@@ -563,18 +562,14 @@ class RoboticPushingEnv(Env):
             progress_reward = 0
             self.prev_dist = dist
         
-        # End-effector to object proximity reward
+        # 5. End-effector to object proximity reward
         ee_pos = p.getLinkState(self.robot_id, self.end_effector_index)[0]
-        # ee_to_object_dist = np.sqrt((ee_pos[0] - self.obj_center_x)**2 + 
-        #                         (ee_pos[1] - self.obj_center_y)**2)
-        # approach_reward = 0.2 / (1.0 + 10.0 * ee_to_object_dist)
-
         # More generous approach reward that doesn't diminish as quickly
         ee_to_object_dist = np.sqrt((ee_pos[0] - self.obj_center_x)**2 + 
                             (ee_pos[1] - self.obj_center_y)**2)
         approach_reward = 1.0 / (1.0 + 3.0 * ee_to_object_dist)  # Much stronger signal
 
-        # Object movement reward
+        # 6. Object movement reward
         if hasattr(self, 'prev_object_pos'):
             object_movement = np.sqrt((self.obj_center_x - self.prev_object_pos[0])**2 +
                                     (self.obj_center_y - self.prev_object_pos[1])**2)
@@ -593,7 +588,7 @@ class RoboticPushingEnv(Env):
 
         self.prev_object_pos = (self.obj_center_x, self.obj_center_y)
 
-        # Add occlusion penalty
+        # 7. Add occlusion penalty
         occlusion_penalty = -5.0 if self.current_occlusion else 0.0
         
         # Total reward

@@ -252,7 +252,7 @@ class RobotPushTrainer:
             model_dir: Directory for model saves
             render_mode: Rendering mode for the environment
             difficulty_level: Difficulty level for the object spawn range
-            observation_type: Type of observation space (multimodal, vision_only, proprio_only)
+            observation_type: Type of observation space (multimodal, multimodal_no_goal, vision_only, proprio_only)
         """
         # Store configuration parameters
         self.total_timesteps = total_timesteps
@@ -323,8 +323,6 @@ class RobotPushTrainer:
         self.object_spawn_range_x, self.object_spawn_range_y = self.curriculum_ranges[self.difficulty_level]
 
         print(f"[INFO] Difficulty level {self.difficulty_level}: {self.level_names[self.difficulty_level]}")
-        # print(f"[INFO] Object spawn range x: {self.object_spawn_range_x}")
-        # print(f"[INFO] Object spawn range y: {self.object_spawn_range_y}")
 
         if tensorboard_log:
             self.tensorboard_writer = SummaryWriter(log_dir=tensorboard_log)
@@ -651,7 +649,7 @@ def parse_arguments():
     parser.add_argument("--run-episode", action="store_true", help="Run a single episode with a trained model")
     parser.add_argument("--n-eval-episodes", type=int, default=10, help="Number of episodes for evaluation")
     parser.add_argument("--difficulty-level", type=int, default=0, help="Difficulty level for the object spawn range (between 0 to 4)")
-    parser.add_argument("--observation-type", type=str, default="multimodal", help="Observation type multimodal, vision_only, proprio_only")
+    parser.add_argument("--observation-type", type=str, default="multimodal", help="Observation type multimodal, multimodal_no_goal, vision_only, proprio_only")
     
     return parser.parse_args()
 
