@@ -23,7 +23,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, SubprocVecEnv
 
 # Import agent environment
-from stage_5_agent_environment_v0_obj_rand_pos_v2 import RoboticPushingEnv
+from stage_5_agent_environment_v0_obj_rand_pos_v3 import RoboticPushingEnv
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -427,6 +427,8 @@ def parse_arguments():
 if __name__ == "__main__":
     # Parse command line arguments
     args = parse_arguments()
+
+    ent_coef = "auto_0.1"
     
     # Configure TensorBoard logging
     tensorboard_log = None
@@ -446,7 +448,7 @@ if __name__ == "__main__":
         train_freq=args.train_freq,
         learning_starts=args.learning_starts,
         tensorboard_log=tensorboard_log,
-        ent_coef=args.ent_coef,
+        ent_coef=ent_coef, # Change to 'auto_0.05' for better exploration
         checkpoint_freq=args.checkpoint_freq,
         eval_freq=args.eval_freq,
         random_seed=args.seed,
