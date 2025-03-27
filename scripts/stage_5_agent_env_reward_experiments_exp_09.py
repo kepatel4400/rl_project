@@ -542,13 +542,14 @@ class RoboticPushingEnv(Env):
         """Simplified reward function for the basic pushing task."""
 
         # Weights for each reward component
-        time_penalty_weight = 0.05        # Reduced to be less punitive
-        goal_reward_weight = 5.0         # Goal completion is important
-        distance_reward_weight = 0.0     # 
-        progress_reward_weight = 0.0     # Increased significantly - progress is crucial
-        approach_reward_weight = 0.0     # Increased to encourage proper positioning
-        movement_reward_weight = 0.0     # Moving the object is important
-        occlusion_penalty_weight = 0.   # Discourage blocking the object view
+        # ROBOT-CENTRIC REWARDS
+        time_penalty_weight = 0.05        # Unchanged (baseline)
+        goal_reward_weight = 5.0          # Unchanged (baseline)
+        distance_reward_weight = 1.0      # Halve (object-target distance)
+        progress_reward_weight = 1.0      # Halve (distance reduction)
+        movement_reward_weight = 0.75     # Halve (object movement)
+        approach_reward_weight = 2.0      # Double (robot-object proximity)
+        occlusion_penalty_weight = 0.2    # Unchanged (baseline)
 
         # 1. Time penalty
         time_penalty = -0.01
