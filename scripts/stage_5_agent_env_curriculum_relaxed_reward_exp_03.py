@@ -483,24 +483,24 @@ class RoboticPushingEnv(Env):
 
         # Return different observation components based on observation type
         if self.observation_type == "vision_only":
-            logging.info(f"ℹ️ [observation] Vision only observation")
+            # logging.info(f"ℹ️ [observation] Vision only observation")
             return {
                 'vision': object_bbox,
                 'target': self.target_position_2d
             }
         elif self.observation_type == "proprio_only":
-            logging.info(f"ℹ️ [observation] Proprioception only observation")
+            # logging.info(f"ℹ️ [observation] Proprioception only observation")
             return {
                 'proprioception': proprio_data
             }
         elif self.observation_type == "multimodal_no_goal":
-            logging.info(f"ℹ️ [observation] Multimodal observation without goal")
+            # logging.info(f"ℹ️ [observation] Multimodal observation without goal")
             return {
                 'vision': object_bbox,
                 'proprioception': proprio_data
             }
         elif self.observation_type == "multimodal":
-            logging.info(f"ℹ️ [observation] Multimodal observation with goal")
+            # logging.info(f"ℹ️ [observation] Multimodal observation with goal")
             return {
                 'vision': object_bbox,
                 'target': self.target_position_2d,

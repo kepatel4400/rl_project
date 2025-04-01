@@ -24,9 +24,9 @@ from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, SubprocVecEnv
 
 # Import agent environment
 try:
-    from scripts.stage_5_agent_env_curriculum_relaxed_reward_exp_03 import RoboticPushingEnv
+    from scripts.stage_5_agent_env_reward_experiments_exp_09 import RoboticPushingEnv
 except ImportError:
-    from stage_5_agent_env_curriculum_relaxed_reward_exp_03 import RoboticPushingEnv
+    from stage_5_agent_env_reward_experiments_exp_09 import RoboticPushingEnv
 
 try:
     from torch.utils.tensorboard import SummaryWriter
