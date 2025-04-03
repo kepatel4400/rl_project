@@ -3,7 +3,7 @@
 # Define arrays for experiment configurations with one-to-one mapping
 exp_names=("exp_07" "exp_08" "exp_09" "exp_10" "exp_11")
 observation_types=("multimodal" "multimodal" "multimodal" "multimodal" "multimodal_no_goal")
-extra_types=("sparse_vs_dense" "object_centric" "robot_centric" "vary_target" "no_goal_vary_target")
+extra_types=("sparse_vs_dense" "object_centric" "robot_centric" "vary_target" "vary_target")
 model_names=(
   "final_model_sac_20250327_204837"
   "final_model_sac_20250330_125624" 
