@@ -222,7 +222,8 @@ class RobotPushTrainer:
         model_dir: str = "models",
         render_mode: Optional[str] = None,
         difficulty_level: int = 0,
-        observation_type: str = "multimodal"
+        observation_type: str = "multimodal",
+        eval_only: bool = False
     ):
         """
         Initialize the trainer with configuration parameters.
@@ -252,7 +253,7 @@ class RobotPushTrainer:
             model_dir: Directory for model saves
             render_mode: Rendering mode for the environment
             difficulty_level: Difficulty level for the object spawn range
-            observation_type: Type of observation space (multimodal, vision_only, proprio_only)
+            observation_type: Type of observation space (multimodal, multimodal_no_goal, vision_only, proprio_only)
         """
         # Store configuration parameters
         self.total_timesteps = total_timesteps
@@ -311,6 +312,14 @@ class RobotPushTrainer:
             ((0.48, 0.60), (-0.15, 0.15)),    # Very hard
         ]
 
+        self.curriculum_ranges_eval = [
+            ((0.58, 0.58), (-0.05, -0.05)),  # Very easy
+            ((0.55, 0.55), (0.07, 0.07)),    # Easy
+            ((0.52, 0.52), (-0.10, -0.10)),    # Medium
+            ((0.50, 0.50), (0.12, 0.12)),   # Hard
+            ((0.48, 0.48), (-0.15, -0.15)),    # Very hard
+        ]
+
         # Level descriptions for better logging
         self.level_names = ["Very Easy", "Easy", "Medium", "Hard", "Very Hard"]
 
@@ -320,11 +329,14 @@ class RobotPushTrainer:
             raise ValueError(f"Invalid difficulty level. Should be between 0 and {total_levels-1}")
 
         # Map difficulty levels (int: 0 to 4) to curriculum ranges (very easy to very hard)
-        self.object_spawn_range_x, self.object_spawn_range_y = self.curriculum_ranges[self.difficulty_level]
+        if eval_only:
+            self.object_spawn_range_x, self.object_spawn_range_y = self.curriculum_ranges_eval[self.difficulty_level]
+        else:
+            self.object_spawn_range_x, self.object_spawn_range_y = self.curriculum_ranges[self.difficulty_level]
 
         print(f"[INFO] Difficulty level {self.difficulty_level}: {self.level_names[self.difficulty_level]}")
-        # print(f"[INFO] Object spawn range x: {self.object_spawn_range_x}")
-        # print(f"[INFO] Object spawn range y: {self.object_spawn_range_y}")
+        print(f"[INFO] Object spawn range x: {self.object_spawn_range_x}")
+        print(f"[INFO] Object spawn range y: {self.object_spawn_range_y}")
 
         if tensorboard_log:
             self.tensorboard_writer = SummaryWriter(log_dir=tensorboard_log)
@@ -731,7 +743,7 @@ def parse_arguments():
     parser.add_argument("--run-episode", action="store_true", help="Run a single episode with a trained model")
     parser.add_argument("--n-eval-episodes", type=int, default=10, help="Number of episodes for evaluation")
     parser.add_argument("--difficulty-level", type=int, default=0, help="Difficulty level for the object spawn range (between 0 to 4)")
-    parser.add_argument("--observation-type", type=str, default="multimodal", help="Observation type multimodal, vision_only, proprio_only")
+    parser.add_argument("--observation-type", type=str, default="multimodal", help="Observation type multimodal, multimodal_no_goal, vision_only, proprio_only")
 
     # Recording options
     parser.add_argument("--record", action="store_true", help="Record a video of the episode")
@@ -776,7 +788,8 @@ if __name__ == "__main__":
         model_dir=args.model_dir,
         render_mode="human" if args.render else None,
         difficulty_level=args.difficulty_level,
-        observation_type=args.observation_type
+        observation_type=args.observation_type,
+        eval_only=args.run_episode
     )
     
     # Mode selection based on command line arguments

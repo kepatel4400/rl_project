@@ -1,0 +1,32 @@
+# Training parameters
+total_timesteps: 1000000          # Total timesteps for training
+learning_rate: 0.0003               # Learning rate
+buffer_size: 300000               # Replay buffer size
+batch_size: 256                   # Batch size
+gamma: 0.99                       # Discount factor
+tau: 0.005                        # Target network update rate
+gradient_steps: 4                 # Gradient steps per update
+train_freq: 4                     # Update frequency
+learning_starts: 5000             # Steps before learning starts
+ent_coef: "auto"                  # Entropy coefficient ('auto' or float)
+
+# Environment parameters
+n_envs: 8                         # Number of parallel environments
+parallel: true                    # Use parallel environments (SubprocVecEnv)
+max_steps: 200                    # Maximum steps per episode
+render: false                     # Render the environment during training
+
+# Logging and saving
+log_dir: "outputs/logs"            # Directory for logs
+model_dir: "outputs/models"        # Directory for model saves
+tensorboard: true                 # Use TensorBoard logging
+render_mode: null                 # Render mode (None, 'human', 'rgb_array', 'human_rgb_array')
+checkpoint_freq: 25000            # Checkpoint frequency (in timesteps)
+eval_freq: 25000                  # Evaluation frequency (in timesteps)
+
+# Miscellaneous
+seed: null                        # Random seed
+load_model: null                  # Path to model to load
+eval_only: false                  # Only run evaluation on a trained model
+run_episode: false                # Run a single episode with a trained model
+n_eval_episodes: 10               # Number of episodes for evaluation

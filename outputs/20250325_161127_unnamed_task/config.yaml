@@ -1,0 +1,6 @@
+eval_only: false
+load_model: /home/patelke/SensorFusion/rl_project/models_exp_02_curriculum_learning_ent_coef_0p1_relaxed_reward/sac_pusher_sac_20250325_031440_500000_steps.zip
+parallel: false
+render: false
+run_episode: true
+tensorboard: false

@@ -253,12 +253,12 @@ class RoboticPushingEnv(Env):
         )
         
         # Create a line from camera to target
-        p.addUserDebugLine(
-            self.camera_position,
-            self.camera_target,
-            lineColorRGB=[1, 0, 0],
-            lineWidth=2.0
-        )
+        # p.addUserDebugLine(
+        #     self.camera_position,
+        #     self.camera_target,
+        #     lineColorRGB=[1, 0, 0],
+        #     lineWidth=2.0
+        # )
     
     def _get_camera_image(self):
         """Capture an image from the camera."""
