@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eo pipefail
 
 # This script runs the robotic pushing agent training with a YAML configuration
 # and logs all output to a timestamped file in the experiment directory
@@ -19,7 +20,7 @@ mkdir -p "${exp_dir}"
 
 # Run the training script with the YAML config
 # Output will be captured in the experiment directory
-python scripts/stage_6_train_agent_v3.py --config "${config_yaml}" --task-name "${task_name}" 2>&1 | tee -a "${exp_dir}/training_log.txt"
+python scripts/stages/stage_6_train_agent_v3.py --config "${config_yaml}" --task-name "${task_name}" 2>&1 | tee -a "${exp_dir}/training_log.txt"
 
 echo "Training complete for task: ${task_name}"
 echo "Results saved to: ${exp_dir}"

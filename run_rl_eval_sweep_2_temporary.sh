@@ -1,4 +1,10 @@
 #!/bin/bash
+set -eo pipefail
+
+if [[ $# -ne 1 || "$1" != --trust-checkpoint ]]; then
+  echo "Usage: $0 --trust-checkpoint" >&2
+  exit 1
+fi
 
 # Define arrays for experiment configurations with one-to-one mapping
 exp_names=("exp_11")
@@ -40,10 +46,10 @@ for i in {0..0}; do
     
     # Run the evaluation script
     python scripts/stage_6_train_agent_exp_03_eval.py \
-      --eval-only \
+      --eval-only --trust-checkpoint \
       --difficulty-level ${difficulty_level} \
       --observation-type ${observation_type} \
-      --load-model models_${exp_name}_${observation_type}_${extra_type}/${model_name}.zip 2>&1 | \
+      --load-model "models_${exp_name}_${observation_type}_${extra_type}/${model_name}.zip" 2>&1 | \
       tee -a "eval_output_${task_name}_$(date +'%Y%m%d_%H%M%S').log"
     
     # Increment counter

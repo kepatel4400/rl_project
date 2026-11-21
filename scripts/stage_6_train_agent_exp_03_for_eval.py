@@ -223,7 +223,9 @@ class RobotPushTrainer:
         render_mode: Optional[str] = None,
         difficulty_level: int = 0,
         observation_type: str = "multimodal",
-        eval_only: bool = False
+        eval_only: bool = False,
+        *,
+        trust_checkpoint: bool = False,
     ):
         """
         Initialize the trainer with configuration parameters.
@@ -276,6 +278,9 @@ class RobotPushTrainer:
         self.parallel_envs = parallel_envs
         self.max_steps = max_steps
         self.load_model = load_model
+        self.trust_checkpoint = trust_checkpoint
+        if self.load_model and self.trust_checkpoint is not True:
+            raise ValueError("Loading a checkpoint requires trust_checkpoint=True.")
         self.log_dir = log_dir
         self.model_dir = model_dir
         self.render_mode = render_mode
@@ -386,9 +391,9 @@ class RobotPushTrainer:
         print("Setting up SAC model...")
         
         # Load pre-trained model if specified
-        if self.load_model and os.path.exists(self.load_model):
+        if self.load_model:
             print(f"Loading pre-trained model from {self.load_model}")
-            self.model = SAC.load(
+            self.model = self._load_checkpoint(
                 self.load_model,
                 env=self.env,
                 tensorboard_log=self.tensorboard_log,
@@ -518,6 +523,11 @@ class RobotPushTrainer:
             print(f"Interrupted model saved to {interrupted_model_path}")
             return interrupted_model_path
     
+    def _load_checkpoint(self, path, **kwargs):
+        if self.trust_checkpoint is not True:
+            raise ValueError("Loading a checkpoint requires trust_checkpoint=True.")
+        return SAC.load(path, **kwargs)
+
     def evaluate(self, model_path=None, n_eval_episodes=10, deterministic=True):
         """
         Evaluate a trained model.
@@ -537,8 +547,8 @@ class RobotPushTrainer:
             self.setup_environments()
         
         # Load model if path is provided
-        if model_path and os.path.exists(model_path):
-            model = SAC.load(model_path, env=self.eval_env)
+        if model_path:
+            model = self._load_checkpoint(model_path, env=self.eval_env)
         else:
             # Use existing model
             model = self.model
@@ -578,8 +588,8 @@ class RobotPushTrainer:
         )
         
         # Load model if path is provided
-        if model_path and os.path.exists(model_path):
-            model = SAC.load(model_path)
+        if model_path:
+            model = self._load_checkpoint(model_path)
         else:
             # Use existing model
             model = self.model
@@ -658,13 +668,18 @@ def parse_arguments():
     # Miscellaneous
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--load-model", type=str, default=None, help="Path to model to load")
+    parser.add_argument("--trust-checkpoint", action="store_true",
+                        help="Allow loading a checkpoint from a trusted source (can execute code)")
     parser.add_argument("--eval-only", action="store_true", help="Only run evaluation on a trained model")
     parser.add_argument("--run-episode", action="store_true", help="Run a single episode with a trained model")
     parser.add_argument("--n-eval-episodes", type=int, default=10, help="Number of episodes for evaluation")
     parser.add_argument("--difficulty-level", type=int, default=0, help="Difficulty level for the object spawn range (between 0 to 4)")
     parser.add_argument("--observation-type", type=str, default="multimodal", help="Observation type multimodal, multimodal_no_goal, vision_only, proprio_only")
     
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.load_model and not args.trust_checkpoint:
+        parser.error("Loading a checkpoint requires --trust-checkpoint (trusted sources only).")
+    return args
 
 
 if __name__ == "__main__":
@@ -699,6 +714,7 @@ if __name__ == "__main__":
         parallel_envs=args.parallel,
         max_steps=args.max_steps,
         load_model=args.load_model,
+        trust_checkpoint=args.trust_checkpoint,
         log_dir=args.log_dir,
         model_dir=args.model_dir,
         render_mode="human" if args.render else None,
@@ -723,10 +739,9 @@ if __name__ == "__main__":
         )
     else:
         # Training mode
-        trained_model_path = trainer.train()
+        trainer.train()
         
         # Optionally evaluate the trained model
         trainer.evaluate(
-            model_path=trained_model_path,
             n_eval_episodes=args.n_eval_episodes
         )

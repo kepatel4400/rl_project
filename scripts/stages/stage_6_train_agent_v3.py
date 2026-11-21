@@ -50,7 +50,9 @@ class RobotPushTrainer:
         self,
         config: Dict[str, Any],
         experiment_dir: str = None,
-        task_name: str = None
+        task_name: str = None,
+        *,
+        trust_checkpoint: bool = False,
     ):
         """
         Initialize the trainer with configuration parameters from YAML.
@@ -84,6 +86,9 @@ class RobotPushTrainer:
         self.parallel_envs = config.get('parallel', False)
         self.max_steps = config.get('max_steps', 1000)
         self.load_model = config.get('load_model', None)
+        self.trust_checkpoint = trust_checkpoint
+        if self.load_model and self.trust_checkpoint is not True:
+            raise ValueError("Loading a checkpoint requires trust_checkpoint=True.")
         self.render_mode = config.get('render_mode', None)
         
         # Setup logging and model directories based on experiment structure
@@ -163,9 +168,9 @@ class RobotPushTrainer:
         print("Setting up SAC model...")
         
         # Load pre-trained model if specified
-        if self.load_model and os.path.exists(self.load_model):
+        if self.load_model:
             print(f"Loading pre-trained model from {self.load_model}")
-            self.model = SAC.load(
+            self.model = self._load_checkpoint(
                 self.load_model,
                 env=self.env,
                 tensorboard_log=self.tensorboard_log,
@@ -280,6 +285,11 @@ class RobotPushTrainer:
             print(f"Interrupted model saved to {interrupted_model_path}")
             return interrupted_model_path
     
+    def _load_checkpoint(self, path, **kwargs):
+        if self.trust_checkpoint is not True:
+            raise ValueError("Loading a checkpoint requires trust_checkpoint=True.")
+        return SAC.load(path, **kwargs)
+
     def evaluate(self, model_path=None, n_eval_episodes=10, deterministic=True):
         """
         Evaluate a trained model.
@@ -299,8 +309,8 @@ class RobotPushTrainer:
             self.setup_environments()
         
         # Load model if path is provided
-        if model_path and os.path.exists(model_path):
-            model = SAC.load(model_path, env=self.eval_env)
+        if model_path:
+            model = self._load_checkpoint(model_path, env=self.eval_env)
         else:
             # Use existing model
             model = self.model
@@ -337,8 +347,8 @@ class RobotPushTrainer:
         )
         
         # Load model if path is provided
-        if model_path and os.path.exists(model_path):
-            model = SAC.load(model_path)
+        if model_path:
+            model = self._load_checkpoint(model_path)
         else:
             # Use existing model
             model = self.model
@@ -477,6 +487,8 @@ def parse_arguments():
     # Miscellaneous
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--load-model", type=str, default=None, help="Path to model to load")
+    parser.add_argument("--trust-checkpoint", action="store_true",
+                        help="Allow loading a checkpoint from a trusted source (can execute code)")
     parser.add_argument("--eval-only", action="store_true", help="Only run evaluation on a trained model")
     parser.add_argument("--run-episode", action="store_true", help="Run a single episode with a trained model")
     parser.add_argument("--n-eval-episodes", type=int, default=None, help="Number of episodes for evaluation")
@@ -498,10 +510,11 @@ def merge_config_with_args(config, args):
     """
     # Create a copy of the config to avoid modifying the original
     merged_config = config.copy()
+    merged_config.pop('trust_checkpoint', None)
     
     # Update the config with any non-None command-line arguments
     for key, value in vars(args).items():
-        if value is not None and key != 'config' and key != 'task_name':
+        if value is not None and key not in ('config', 'task_name', 'trust_checkpoint'):
             # Handle boolean flags specially
             if key == 'parallel' and value:
                 merged_config['parallel'] = True
@@ -546,6 +559,8 @@ if __name__ == "__main__":
     
     # Merge command-line arguments with YAML config
     merged_config = merge_config_with_args(config, args)
+    if merged_config.get("load_model") and not args.trust_checkpoint:
+        raise SystemExit("Loading a checkpoint requires --trust-checkpoint (trusted sources only).")
     
     # Get task name
     task_name = args.task_name or "unnamed_task"
@@ -560,6 +575,7 @@ if __name__ == "__main__":
     # Initialize trainer with merged configuration
     trainer = RobotPushTrainer(
         config=merged_config,
+        trust_checkpoint=args.trust_checkpoint,
         experiment_dir=experiment_dir,
         task_name=task_name
     )
@@ -580,10 +596,9 @@ if __name__ == "__main__":
         )
     else:
         # Training mode
-        trained_model_path = trainer.train()
+        trainer.train()
         
         # Optionally evaluate the trained model
         trainer.evaluate(
-            model_path=trained_model_path,
             n_eval_episodes=merged_config.get('n_eval_episodes', 10)
         )
