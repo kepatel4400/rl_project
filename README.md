@@ -1,33 +1,94 @@
-# rl_project
-Robot Learning (ROLE) course project
+# Multimodal reinforcement learning for robotic pushing
 
-## Dependencies
+A simulated Franka Panda learns to push a YCB object across a table into a marked target. The project uses PyBullet and Stable Baselines3 Soft Actor-Critic (SAC) to compare visual observations, proprioception, explicit goal information, and reward design.
 
-The pinned environment targets Linux x86-64. Python 3.11 has a prebuilt
-PyBullet wheel. On Python 3.12 or 3.13, build PyBullet with NumPy support for
-the simulation scripts. The PyTorch build uses CUDA 13. For GPU acceleration,
-use a compatible NVIDIA driver from the R580 series or newer.
+[Course paper](Patel_ROLE_project/Patel_ROLE_project_report.pdf) · [Reproduction note](docs/reproduction.md) · [Original demo](videos/push_episode_1743126069_hard_multimodal.mp4)
 
-The simulation scripts also import `urdf_models` for the object meshes. Make
-the directory containing that package available on `PYTHONPATH`.
-[PyBullet URDF models](https://github.com/GPT-RL/pybullet-URDF-models/tree/0f00cd5f7a4f5a5db893c2141c890f9b2e995431)
+![A simulated Panda approaches and pushes a pudding box onto the green target](videos/multimodal-hard-replay.gif)
 
-## Loading checkpoints
+The archived multimodal checkpoint reached the target in **27 steps** on this selected hard-difficulty spawn. [Watch the MP4](videos/multimodal-hard-replay.mp4)
 
-Stable Baselines3 checkpoint archives contain pickle data that can execute code
-when loaded. Use `--trust-checkpoint` only for a checkpoint whose source you
-trust. When using a YAML configuration, verify the checkpoint path it selects
-before passing the flag on the command line.
+## How the policy works
 
-```bash
-bash run_eval.sh path/to/model.zip --trust-checkpoint
-bash run_rl_eval_sweep.sh --trust-checkpoint
+```mermaid
+flowchart LR
+    A["PyBullet simulation"] --> B["Object bounding box and target coordinates"]
+    A --> C["End-effector position and velocity"]
+    B --> D["Selected Gymnasium observation"]
+    C --> D
+    D --> E["SAC actor"]
+    E --> F["Planar displacement"]
+    F --> G["Smoothing and inverse kinematics"]
+    G --> A
+    A --> H["Reward and episode outcome"]
+    H --> I["Replay buffer and critic updates"]
+    D --> I
+    F --> I
+    I --> E
 ```
 
-The training scripts accept `--trust-checkpoint` alongside `--load-model` for
-resuming from an existing checkpoint. Fresh training needs no flag.
+The policy receives numerical features from simulator segmentation and robot state. It outputs a continuous two-dimensional displacement. The controller smooths the action, computes joint targets with inverse kinematics, and maintains a fixed pushing height. During training, SAC learns from replayed transitions with an entropy objective that encourages exploration. The curriculum expands the object spawn range through five difficulty levels as performance improves. [Soft Actor-Critic paper](https://proceedings.mlr.press/v80/haarnoja18b.html)
 
-# TODO:
-- [ ] Upload my paper
-- [ ] Add a few output GIFs
-- [ ] Add result table in the paper
+## What the experiments compare
+
+| Checkpoints | Comparison |
+| --- | --- |
+| `models_exp_02_*` | Early curriculum and reward configuration |
+| `models_exp_03_*` to `models_exp_06_*` | Vision with goal, proprioception, vision plus proprioception with goal, and vision plus proprioception without goal |
+| `models_exp_07_*` | Shaped and sparse rewards |
+| `models_exp_08_*`, `models_exp_09_*` | Object-centric and robot-centric observations |
+| `models_exp_10_*`, `models_exp_11_*` | Varying target positions with and without explicit goal input |
+
+The course report found that multimodal observations performed better than either single modality. Explicit goal input and shaped rewards accelerated learning in the reported experiments. In a new three-episode replay per checkpoint, the goal-conditioned multimodal policy reached the target twice, the multimodal policy without goal input reached it once, and the single-modality policies timed out. [Archived curves](results/plots/) · [Replay protocol and results](docs/reproduction.md#checkpoint-replay)
+
+## Run it locally
+
+Use Linux x86-64 and Python 3.11. Python 3.11 has a prebuilt PyBullet wheel with NumPy support. If building PyBullet from source on a newer Python, enable NumPy support. The pinned PyTorch wheel uses CUDA 13. CPU evaluation works without a GPU. GPU acceleration requires a compatible NVIDIA driver from the R580 series or newer.
+
+From the repository root, create an environment and fetch the external object models at the revision used for the reproduction.
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+
+git clone https://github.com/GPT-RL/pybullet-URDF-models.git ../pybullet-URDF-models
+git -C ../pybullet-URDF-models checkout 0f00cd5f7a4f5a5db893c2141c890f9b2e995431
+export PYTHONPATH="$(realpath ../pybullet-URDF-models)${PYTHONPATH:+:$PYTHONPATH}"
+```
+
+### Record a policy
+
+The recording command works headlessly. Add `--render` to open the simulator window. `--randomize-spawn` samples within the selected difficulty range using `--seed`. Stable Baselines3 checkpoint metadata can execute code during loading, so pass `--trust-checkpoint` only for a file you trust. YAML cannot grant this permission.
+
+```bash
+mkdir -p outputs/demo
+python Patel_ROLE_project/code_directory/agent_training.py \
+  --run-episode --record --seed 36 --randomize-spawn \
+  --difficulty-level 3 --max-steps 150 --observation-type multimodal --trust-checkpoint \
+  --load-model models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip \
+  --video-path outputs/demo/multimodal.mp4
+```
+
+### Train from scratch
+
+This small run exercises environment setup, training, and model export. It is intended as a smoke test. The course experiments trained on the order of millions of timesteps.
+
+```bash
+python Patel_ROLE_project/code_directory/agent_training.py \
+  --total-timesteps 64 --learning-starts 32 --buffer-size 1024 \
+  --batch-size 32 --max-steps 100 --n-eval-episodes 1 --seed 42 \
+  --observation-type multimodal --model-dir outputs/demo/models \
+  --log-dir outputs/demo/logs
+```
+
+## Repository guide
+
+| Path | Purpose |
+| --- | --- |
+| [Patel_ROLE_project/](Patel_ROLE_project/) | Course report and submitted simulator/trainer |
+| [scripts/](scripts/) | Experiment variants, evaluation, and earlier environment prototypes |
+| [config/train/](config/train/) | YAML configuration for the staged trainers |
+| [results/](results/) | Archived training curves and metric exports |
+| [videos/](videos/) | Recorded simulation episodes |
+| `models_exp_*/` | Archived experiment checkpoints |

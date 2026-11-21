@@ -1,0 +1,13 @@
+mode,seed,difficulty_level,max_steps,episode,success,steps,reward
+vision_only,42,3,150,1,false,150,-112.45
+vision_only,42,3,150,2,false,150,-106.92
+vision_only,42,3,150,3,false,150,-82.35
+proprio_only,42,3,150,1,false,150,-68.35
+proprio_only,42,3,150,2,false,150,-59.94
+proprio_only,42,3,150,3,false,150,-54.61
+multimodal,42,3,150,1,false,150,-66.14
+multimodal,42,3,150,2,true,38,251.12
+multimodal,42,3,150,3,true,29,257.66
+multimodal_no_goal,42,3,150,1,false,150,-53.77
+multimodal_no_goal,42,3,150,2,false,150,-113.61
+multimodal_no_goal,42,3,150,3,true,29,260.37

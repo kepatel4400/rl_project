@@ -614,7 +614,9 @@ class RobotPushTrainer:
         if model is None:
             raise ValueError("No model available. Either provide a model_path or train a model first.")
         
-        # Run an episode
+        # Reapply the caller's seed after loading checkpoint metadata.
+        if self.random_seed is not None:
+            np.random.seed(self.random_seed)
         obs, _ = env.reset()
         done = False
         truncated = False
@@ -626,9 +628,8 @@ class RobotPushTrainer:
         # Create a list to store distance metrics over time
         distances = []
         
-        while not (done or truncated):
-            action, _ = model.predict(obs, deterministic=deterministic)
-            # Record frame before step if recording is enabled
+        while True:
+            # Capture the initial state and every state through termination.
             if record:
                 # Get the camera image
                 width, height, rgb_img, depth_img, seg_img = p.getCameraImage(
@@ -648,6 +649,9 @@ class RobotPushTrainer:
                     video_writer = cv2.VideoWriter(
                         video_path, fourcc, fps, (width, height)
                     )
+                    if not video_writer.isOpened():
+                        env.close()
+                        raise OSError(f"Could not open video for writing: {video_path}")
                 
                 # Convert RGB to BGR for OpenCV
                 bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
@@ -655,7 +659,10 @@ class RobotPushTrainer:
                 # Add frame to video
                 video_writer.write(bgr_array)
             
-            # Take the step in the environment
+            if done or truncated:
+                break
+
+            action, _ = model.predict(obs, deterministic=deterministic)
             obs, reward, done, truncated, info = env.step(action)
             total_reward += reward
             step_count += 1
@@ -703,15 +710,13 @@ class RobotPushTrainer:
         
         print(f"\n*******************\n")
 
-        # Wait for user input before closing the environment
-        print("Press 'q' to quit or Ctrl+C to exit...")
-        try:
-            while True:
-                user_input = input()
-                if user_input.lower() == 'q':
-                    break
-        except KeyboardInterrupt:
-            print("\nExiting...")
+        if render:
+            print("Press 'q' to quit or Ctrl+C to exit...")
+            try:
+                while input().strip().lower() != "q":
+                    pass
+            except (EOFError, KeyboardInterrupt):
+                print("\nExiting...")
         
         env.close()
         return total_reward, info
@@ -737,7 +742,7 @@ def parse_arguments():
     parser.add_argument("--n-envs", type=int, default=1, help="Number of parallel environments")
     parser.add_argument("--parallel", action="store_true", help="Use parallel environments (SubprocVecEnv)")
     parser.add_argument("--max-steps", type=int, default=1000, help="Maximum steps per episode")
-    parser.add_argument("--render", action="store_true", help="Render the environment during training")
+    parser.add_argument("--render", action="store_true", help="Open the simulator window during training or recording")
     
     # Logging and saving
     parser.add_argument("--log-dir", type=str, default="logs", help="Directory for logs")
@@ -753,6 +758,8 @@ def parse_arguments():
                         help="Allow loading a checkpoint from a trusted source (can execute code)")
     parser.add_argument("--eval-only", action="store_true", help="Only run evaluation on a trained model")
     parser.add_argument("--run-episode", action="store_true", help="Run a single episode with a trained model")
+    parser.add_argument("--randomize-spawn", action="store_true",
+                        help="Sample a spawn from the difficulty range during single-episode playback")
     parser.add_argument("--n-eval-episodes", type=int, default=10, help="Number of episodes for evaluation")
     parser.add_argument("--difficulty-level", type=int, default=0, help="Difficulty level for the object spawn range (between 0 to 4)")
     parser.add_argument("--observation-type", type=str, default="multimodal", help="Observation type multimodal, multimodal_no_goal, vision_only, proprio_only")
@@ -805,7 +812,7 @@ if __name__ == "__main__":
         render_mode="human" if args.render else None,
         difficulty_level=args.difficulty_level,
         observation_type=args.observation_type,
-        eval_only=args.run_episode
+        eval_only=args.run_episode and not args.randomize_spawn
     )
     
     # Mode selection based on command line arguments
@@ -820,7 +827,7 @@ if __name__ == "__main__":
         trainer.run_episode(
             model_path=args.load_model,
             deterministic=True,
-            render=True,
+            render=args.render or not args.record,
             record=args.record,
             video_path=args.video_path
         )
