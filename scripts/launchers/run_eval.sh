@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eo pipefail
 
+repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 task_name="v0_obj_rand_pos_after_robot_pose_fix"
 
 # Require explicit trust before passing the model to Python.
@@ -20,7 +22,7 @@ exp_dir="outputs/eval/${timestamp}_${task_name}"
 mkdir -p "${exp_dir}"
 
 # Run the evaluation
-python scripts/stages/stage_6_train_agent_v2.py --task-name "${task_name}" --eval-only --load-model="$1" --trust-checkpoint 2>&1 | tee -a "${exp_dir}/eval_log.txt"
+python "$repo_root/scripts/stages/stage_6_train_agent_v2.py" --task-name "${task_name}" --eval-only --load-model="$1" --trust-checkpoint 2>&1 | tee -a "${exp_dir}/eval_log.txt"
 
 echo "Evaluation complete for task: ${task_name}"
 echo "Results saved to: ${exp_dir}"

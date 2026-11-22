@@ -1,6 +1,6 @@
 # Reproducing the robotic pushing experiments
 
-The original course paper compares observation inputs and reward functions for a Franka Panda trained with Soft Actor-Critic in PyBullet. We replayed four released checkpoints under a shared protocol. Both multimodal policies reached the goal, while the two single-modality policies timed out in all three trials. [Course paper](../Patel_ROLE_project/Patel_ROLE_project_report.pdf)
+The original course paper compares observation inputs and reward functions for a Franka Panda trained with Soft Actor-Critic in PyBullet. We replayed four released checkpoints under a shared protocol. Both multimodal policies reached the goal, while the two single-modality policies timed out in all three trials. [Course paper](coursework/report.pdf)
 
 ## Task and method
 
@@ -20,7 +20,7 @@ The original experiments measure the fraction of episodes where the object reach
 
 ## Checkpoint replay
 
-We evaluated the four checkpoint filenames from the archived sweep on CPU with Python 3.11 and the pinned dependencies. Each checkpoint used deterministic actions, three hard-difficulty episodes, seed 42, and a 150-step cap. [Experiment sweep](../run_rl_eval_sweep.sh)
+We evaluated the four checkpoint filenames from the archived sweep on CPU with Python 3.11 and the pinned dependencies. Each checkpoint used deterministic actions, three hard-difficulty episodes, seed 42, and a 150-step cap. [Experiment sweep](../scripts/launchers/run_rl_eval_sweep.sh)
 
 | Observation mode | Goals reached | Mean steps | Mean reward |
 | --- | ---: | ---: | ---: |
@@ -35,7 +35,7 @@ Run the following from the repository root after installing the dependencies and
 
 ```bash
 mode=multimodal
-checkpoint=models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip
+checkpoint=checkpoints/models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip
 python scripts/stage_6_train_agent_exp_03_eval.py \
   --eval-only --trust-checkpoint --load-model "$checkpoint" \
   --observation-type "$mode" --difficulty-level 3 --seed 42 \
@@ -44,14 +44,14 @@ python scripts/stage_6_train_agent_exp_03_eval.py \
 
 | Mode | Checkpoint path |
 | --- | --- |
-| Vision and goal | `models_exp_03_vision_only/final_model_sac_20250326_031046.zip` |
-| Proprioception | `models_exp_04_proprio_only/final_model_sac_20250326_175631.zip` |
-| Vision, proprioception, and goal | `models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip` |
-| Vision and proprioception | `models_exp_06_multimodal_no_goal/interrupted_model_sac_20250327_141302.zip` |
+| Vision and goal | `checkpoints/models_exp_03_vision_only/final_model_sac_20250326_031046.zip` |
+| Proprioception | `checkpoints/models_exp_04_proprio_only/final_model_sac_20250326_175631.zip` |
+| Vision, proprioception, and goal | `checkpoints/models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip` |
+| Vision and proprioception | `checkpoints/models_exp_06_multimodal_no_goal/interrupted_model_sac_20250327_141302.zip` |
 
 ## Recorded demonstration
 
-The video uses the experiment 05 multimodal checkpoint and seed 36 with a sampled hard-difficulty spawn. The episode reached the goal in 27 actions. The demonstration uses a selected starting position. The same checkpoint reached the 150-step cap on the recorder's preset hard spawn. [Video](../videos/multimodal-hard-replay.mp4) · [Recording command](../README.md#record-a-policy)
+The video uses the experiment 05 multimodal checkpoint and seed 36 with a sampled hard-difficulty spawn. The episode reached the goal in 27 actions. The demonstration uses a selected starting position. The same checkpoint reached the 150-step cap on the recorder's preset hard spawn. [Video](../results/videos/multimodal-hard-replay.mp4) · [Recording command](../README.md#record-a-policy)
 
 ## Limits
 

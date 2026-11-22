@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eo pipefail
 
+repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 if [[ $# -ne 1 || "$1" != --trust-checkpoint ]]; then
   echo "Usage: $0 --trust-checkpoint" >&2
   exit 1
@@ -14,4 +16,4 @@ task_name="${exp_name}_${observation_type}_eval_difficulty_level_${difficulty_le
 model_name="final_model_sac_20250326_031046" #final_model_sac_20250326_031046, final_model_sac_20250326_175631, interrupted_model_sac_20250327_083255, interrupted_model_sac_20250327_141302
 
 # Run the evaluation script
-python scripts/stage_6_train_agent_exp_03.py --eval-only --trust-checkpoint --difficulty-level ${difficulty_level} --observation-type ${observation_type} --load-model "models_${exp_name}_${observation_type}/${model_name}.zip" 2>&1 | tee -a "output_${task_name}_$(date +'%Y%m%d_%H%M%S').log"
+python "$repo_root/scripts/stage_6_train_agent_exp_03.py" --eval-only --trust-checkpoint --difficulty-level ${difficulty_level} --observation-type ${observation_type} --load-model "$repo_root/checkpoints/models_${exp_name}_${observation_type}/${model_name}.zip" 2>&1 | tee -a "output_${task_name}_$(date +'%Y%m%d_%H%M%S').log"
