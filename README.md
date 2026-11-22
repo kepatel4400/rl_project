@@ -2,7 +2,7 @@
 
 A simulated Franka Panda learns to push a YCB object across a table into a marked target. The project uses PyBullet and Stable Baselines3 Soft Actor-Critic (SAC) to compare visual observations, proprioception, explicit goal information, and reward design.
 
-[Course paper](docs/coursework/report.pdf) · [Reproduction note](docs/reproduction.md) · [Original demo](results/videos/push_episode_1743126069_hard_multimodal.mp4) · [Cite this project](CITATION.cff)
+[Course paper](docs/coursework/report.pdf) · [Reproduction note](docs/reproduction.md) · [Original demo](results/videos/push_episode_1743126069_hard_multimodal.mp4) · [Cite this project](#citation)
 
 ![A simulated Panda approaches and pushes a pudding box onto the green target](results/videos/multimodal-hard-replay.gif)
 
@@ -106,3 +106,15 @@ Generated recordings go to `outputs/videos/` unless you pass `--video-path`. To 
 | `Patel_ROLE_project/Patel_ROLE_project_report.pdf` | `docs/coursework/report.pdf` |
 | Root `models_*/` folders | `checkpoints/models_*/` |
 | `videos/` | `results/videos/` |
+
+## Citation
+
+If you use this software in your work, cite it with the BibTeX entry below. [Citation metadata](CITATION.cff)
+
+```bibtex
+@misc{patel_robotic_pushing,
+  author = {Patel, Kevin},
+  title  = {Multimodal Vision-Guided Reinforcement Learning for Robotic Object Pushing},
+  url    = {https://github.com/kvnptl/rl_project}
+}
+```
