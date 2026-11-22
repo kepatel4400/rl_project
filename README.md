@@ -1,6 +1,6 @@
 # Multimodal reinforcement learning for robotic pushing
 
-An independent robotics research project by Kevin Patel. A simulated Franka Panda learns to push a YCB object across a table into a marked target. The project uses PyBullet and Stable Baselines3 Soft Actor-Critic (SAC) to compare visual observations, proprioception, explicit goal information, and reward design.
+A simulated Franka Panda learns to push objects into a target in PyBullet. The experiments use Soft Actor-Critic (SAC) to compare vision, robot state, goal information, and reward design.
 
 [Research and reproduction notes](docs/reproduction.md) · [Experiment results](results/) · [Demo video](results/videos/multimodal-hard-replay.mp4) · [Cite this project](#citation)
 
