@@ -2,11 +2,11 @@
 
 A simulated Franka Panda learns to push a YCB object across a table into a marked target. The project uses PyBullet and Stable Baselines3 Soft Actor-Critic (SAC) to compare visual observations, proprioception, explicit goal information, and reward design.
 
-[Course paper](Patel_ROLE_project/Patel_ROLE_project_report.pdf) · [Reproduction note](docs/reproduction.md) · [Original demo](videos/push_episode_1743126069_hard_multimodal.mp4)
+[Course paper](docs/coursework/report.pdf) · [Reproduction note](docs/reproduction.md) · [Original demo](results/videos/push_episode_1743126069_hard_multimodal.mp4) · [Cite this project](#citation)
 
-![A simulated Panda approaches and pushes a pudding box onto the green target](videos/multimodal-hard-replay.gif)
+![A simulated Panda approaches and pushes a pudding box onto the green target](results/videos/multimodal-hard-replay.gif)
 
-The archived multimodal checkpoint reached the target in **27 steps** on this selected hard-difficulty spawn. [Watch the MP4](videos/multimodal-hard-replay.mp4)
+The archived multimodal checkpoint reached the target in **27 steps** on this selected hard-difficulty spawn. [Watch the MP4](results/videos/multimodal-hard-replay.mp4)
 
 ## How the policy works
 
@@ -33,11 +33,11 @@ The policy receives numerical features from simulator segmentation and robot sta
 
 | Checkpoints | Comparison |
 | --- | --- |
-| `models_exp_02_*` | Early curriculum and reward configuration |
-| `models_exp_03_*` to `models_exp_06_*` | Vision with goal, proprioception, vision plus proprioception with goal, and vision plus proprioception without goal |
-| `models_exp_07_*` | Shaped and sparse rewards |
-| `models_exp_08_*`, `models_exp_09_*` | Object-centric and robot-centric observations |
-| `models_exp_10_*`, `models_exp_11_*` | Varying target positions with and without explicit goal input |
+| `checkpoints/models_exp_02_*` | Early curriculum and reward configuration |
+| `checkpoints/models_exp_03_*` to `checkpoints/models_exp_06_*` | Vision with goal, proprioception, vision plus proprioception with goal, and vision plus proprioception without goal |
+| `checkpoints/models_exp_07_*` | Shaped and sparse rewards |
+| `checkpoints/models_exp_08_*`, `checkpoints/models_exp_09_*` | Object-centric and robot-centric observations |
+| `checkpoints/models_exp_10_*`, `checkpoints/models_exp_11_*` | Varying target positions with and without explicit goal input |
 
 The course report found that multimodal observations performed better than either single modality. Explicit goal input and shaped rewards accelerated learning in the reported experiments. In a new three-episode replay per checkpoint, the goal-conditioned multimodal policy reached the target twice, the multimodal policy without goal input reached it once, and the single-modality policies timed out. [Archived curves](results/plots/) · [Replay protocol and results](docs/reproduction.md#checkpoint-replay)
 
@@ -63,10 +63,10 @@ The recording command works headlessly. Add `--render` to open the simulator win
 
 ```bash
 mkdir -p outputs/demo
-python Patel_ROLE_project/code_directory/agent_training.py \
+python scripts/course/agent_training.py \
   --run-episode --record --seed 36 --randomize-spawn \
   --difficulty-level 3 --max-steps 150 --observation-type multimodal --trust-checkpoint \
-  --load-model models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip \
+  --load-model checkpoints/models_exp_05_multimodal/interrupted_model_sac_20250327_083255.zip \
   --video-path outputs/demo/multimodal.mp4
 ```
 
@@ -75,7 +75,7 @@ python Patel_ROLE_project/code_directory/agent_training.py \
 This small run exercises environment setup, training, and model export. It is intended as a smoke test. The course experiments trained on the order of millions of timesteps.
 
 ```bash
-python Patel_ROLE_project/code_directory/agent_training.py \
+python scripts/course/agent_training.py \
   --total-timesteps 64 --learning-starts 32 --buffer-size 1024 \
   --batch-size 32 --max-steps 100 --n-eval-episodes 1 --seed 42 \
   --observation-type multimodal --model-dir outputs/demo/models \
@@ -86,9 +86,35 @@ python Patel_ROLE_project/code_directory/agent_training.py \
 
 | Path | Purpose |
 | --- | --- |
-| [Patel_ROLE_project/](Patel_ROLE_project/) | Course report and submitted simulator/trainer |
-| [scripts/](scripts/) | Experiment variants, evaluation, and earlier environment prototypes |
-| [config/train/](config/train/) | YAML configuration for the staged trainers |
-| [results/](results/) | Archived training curves and metric exports |
-| [videos/](videos/) | Recorded simulation episodes |
-| `models_exp_*/` | Archived experiment checkpoints |
+| [scripts/course/](scripts/course/) | Submitted simulator, trainer, and course training command |
+| [scripts/launchers/](scripts/launchers/) | Shell commands for training, evaluation, and checkpoint sweeps |
+| [scripts/](scripts/) | Experiment variants, evaluation, plotting, and prototypes |
+| [config/train/](config/train/) | YAML configuration for staged training |
+| [config/archive/](config/archive/) | Historical run snapshots, including paths from the original system |
+| [checkpoints/](checkpoints/) | Released model archives, grouped by experiment |
+| [results/](results/) | Archived metrics, plots, and [recorded rollouts](results/videos/) |
+| [docs/coursework/](docs/coursework/) | Course report, proposal, assignment, and figures |
+
+Generated recordings go to `outputs/videos/` unless you pass `--video-path`. To regenerate the goal-conditioning plot from the archived CSVs, run `python scripts/plot_results.py`. It writes to `outputs/plots/`.
+
+### Paths in earlier checkouts
+
+| Previous path | Current path |
+| --- | --- |
+| Root `run_*.sh` scripts | `scripts/launchers/run_*.sh` |
+| `Patel_ROLE_project/code_directory/` | `scripts/course/` |
+| `Patel_ROLE_project/Patel_ROLE_project_report.pdf` | `docs/coursework/report.pdf` |
+| Root `models_*/` folders | `checkpoints/models_*/` |
+| `videos/` | `results/videos/` |
+
+## Citation
+
+If you use this software in your work, cite it with the BibTeX entry below. [Citation metadata](CITATION.cff)
+
+```bibtex
+@misc{patel_robotic_pushing,
+  author = {Patel, Kevin},
+  title  = {Multimodal Vision-Guided Reinforcement Learning for Robotic Object Pushing},
+  url    = {https://github.com/kvnptl/rl_project}
+}
+```

@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "Multimodal Vision-Guided Reinforcement Learning for Robotic Object Pushing"
+authors:
+  - given-names: Kevin
+    family-names: Patel
+repository-code: "https://github.com/kvnptl/rl_project"
+license: Apache-2.0

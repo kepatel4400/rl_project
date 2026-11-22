@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import argparse
+from pathlib import Path
 import os
 
 def plot_step_vs_value(csv_paths, output_path='step_vs_value_plot.png'):
@@ -13,7 +13,7 @@ def plot_step_vs_value(csv_paths, output_path='step_vs_value_plot.png'):
     """
     plt.figure(figsize=(12, 7))
     
-    for i, path in enumerate(csv_paths):
+    for path in csv_paths:
         try:
             # Read CSV file
             df = pd.read_csv(path)
@@ -33,7 +33,7 @@ def plot_step_vs_value(csv_paths, output_path='step_vs_value_plot.png'):
     
     # Add labels and title
     plt.xlabel('Step', fontsize=12)
-    plt.ylabel('Success Rate (%)', fontsize=12)
+    plt.ylabel('Success rate', fontsize=12)
     plt.title('Step vs Success Rate: Multimodal With vs Without Goal-conditioned', fontsize=14)
     plt.legend(fontsize=10)
     plt.grid(True, alpha=0.3)
@@ -47,19 +47,10 @@ def plot_step_vs_value(csv_paths, output_path='step_vs_value_plot.png'):
     plt.show()
 
 if __name__ == "__main__":
-
-    csv_file1 = "/home/patelke/SensorFusion/rl_project/results/vision_only.csv"
-    csv_file2 = "/home/patelke/SensorFusion/rl_project/results/proprio_only.csv"
-    csv_file3 = "/home/patelke/SensorFusion/rl_project/results/multimodal_no_goal.csv"
-    csv_file4 = "/home/patelke/SensorFusion/rl_project/results/multimodal.csv"
-    csv_file5 = "/home/patelke/SensorFusion/rl_project/results/sparse.csv"
-    csv_file6 = "/home/patelke/SensorFusion/rl_project/results/shaped.csv"
-
-    # csv_paths = [csv_file1, csv_file2, csv_file3, csv_file4]
-    # csv_paths = [csv_file5, csv_file6]
-    csv_paths = [csv_file3, csv_file4]
-
-    output = "/home/patelke/SensorFusion/rl_project/results/plots/step_vs_success_rate_plot_multimodal_compare.png"
-    
-    # Plot the data
-    plot_step_vs_value(csv_paths, output_path=output)
+    results_dir = Path(__file__).resolve().parent.parent / "results"
+    output = Path("outputs/plots/step_vs_success_rate_plot_multimodal_compare.png")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    plot_step_vs_value(
+        [results_dir / "multimodal_no_goal.csv", results_dir / "multimodal.csv"],
+        output_path=output,
+    )

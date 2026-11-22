@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eo pipefail
 
+repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 if [[ $# -ne 1 || "$1" != --trust-checkpoint ]]; then
   echo "Usage: $0 --trust-checkpoint" >&2
   exit 1
@@ -46,11 +48,11 @@ for i in {0..3}; do
     echo "  Running task: ${task_name} [$(( total_runs + 1 ))/20]"
     
     # Run the evaluation script
-    python scripts/stage_6_train_agent_exp_03_eval.py \
+    python "$repo_root/scripts/stage_6_train_agent_exp_03_eval.py" \
       --eval-only --trust-checkpoint \
       --difficulty-level ${difficulty_level} \
       --observation-type ${observation_type} \
-      --load-model "models_${exp_name}_${observation_type}/${model_name}.zip" 2>&1 | \
+      --load-model "$repo_root/checkpoints/models_${exp_name}_${observation_type}/${model_name}.zip" 2>&1 | \
       tee -a "eval_output_${task_name}_$(date +'%Y%m%d_%H%M%S').log"
     
     # Increment counter

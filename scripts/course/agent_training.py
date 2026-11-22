@@ -23,10 +23,10 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, SubprocVecEnv
 
 # Import agent environment
-try:
+if __package__:
+    from .agent_environment import RoboticPushingEnv
+else:
     from agent_environment import RoboticPushingEnv
-except ImportError:
-    from code_directory.agent_environment import RoboticPushingEnv
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -600,7 +600,7 @@ class RobotPushTrainer:
         video_writer = None
         if record:
             if video_path is None:
-                video_path = f"videos/push_episode_{int(time.time())}.mp4"
+                video_path = f"outputs/videos/push_episode_{int(time.time())}.mp4"
                 os.makedirs(os.path.dirname(video_path), exist_ok=True)
             print(f"Recording video to {video_path}")
         

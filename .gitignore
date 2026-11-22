@@ -172,5 +172,12 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local training and evaluation artifacts
 logs/*
-models*
+models/
+models_*/
+!/checkpoints/models_*/
+outputs/
+/debug_mask.png
+/debug_target_mask.png

@@ -600,7 +600,7 @@ class RobotPushTrainer:
         video_writer = None
         if record:
             if video_path is None:
-                video_path = f"videos/push_episode_{int(time.time())}.mp4"
+                video_path = f"outputs/videos/push_episode_{int(time.time())}.mp4"
                 os.makedirs(os.path.dirname(video_path), exist_ok=True)
             print(f"Recording video to {video_path}")
         
